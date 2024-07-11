@@ -1,0 +1,65 @@
+version: "3"
+
+services:
+  pugdag_explorer:
+    container_name: pugdag_explorer
+    image: pugdag/pugdag-explorer:latest
+    restart: unless-stopped
+    environment:
+      API_URI: "http://localhost:8000"
+      API_WS_URI: "ws://localhost:8000"
+    ports:
+      - "8080:8080/tcp"
+
+  pugdag_rest_server:
+    container_name: pugdag_rest_server
+    image: pugdag/pugdag-rest-server:latest
+    restart: unless-stopped
+    environment:
+      PUGDAGD_HOST_1: pugdagd:42110
+      SQL_URI: postgresql+asyncpg://postgres:postgres@postgresql:5432/postgres
+    ports:
+      - "8000:8000/tcp"
+    links:
+      - pugdagd
+      - postgresql
+
+  pugdag_db_filler:
+    container_name: pugdag_db_filler
+    image: pugdag/pugdag-db-filler:latest
+    restart: unless-stopped
+    environment:
+      DEBUG: "true"
+      PUGDAGD_HOST_1: pugdagd:42110
+      SQL_URI: postgresql://postgres:postgres@postgresql:5432/postgres
+    links:
+      - pugdagd
+      - postgresql
+
+  postgresql:
+    container_name: postgresql
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432/tcp"
+    volumes:
+      - postgresql:/var/lib/postgresql/data/
+
+  pugdagd:
+    container_name: pugdagd
+    image: pugdag/pugdagd:latest
+    restart: unless-stopped
+    ports:
+      - "42110:42110/tcp"
+      - "42111:42111/tcp"
+    volumes:
+      - pugdagd:/app/data/
+    command: pugdagd --utxoindex --connect=mainnet-dnsseed-1.pugdagcoin.com
+
+volumes:
+  postgresql:
+  pugdagd:
